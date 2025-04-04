@@ -3,12 +3,18 @@ import UIKit
 class ProductDetailViewController: UIViewController {
 
     // MARK: - база
-    private let availableSizes = ["XS", "S", "M", "L", "XL"] // \
-    private var selectedSize: String? = nil
+    private let availableSizes = ["XXS", "XS", "S", "M", "L", "XL"]
+    private var selectedSize: String? = "XXS"
     private var sizeButtons: [UIButton] = []
+    private let isNewProduct = true
+
+    let veryLightBrownColor = UIColor(red: 204/255, green: 177/255, blue: 161/255, alpha: 1.0)
+    let darkBrownColor = UIColor(red: 92/255, green: 64/255, blue: 51/255, alpha: 1.0)
+    let lightBeigeColor = UIColor(red: 240/255, green: 240/255, blue: 240/255, alpha: 1.0)
+    let lightBorderColor = UIColor.systemGray5
+    let darkTextColor = UIColor.darkGray
 
     // MARK: - UI элементы
-
     private lazy var scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
@@ -28,7 +34,22 @@ class ProductDetailViewController: UIViewController {
         imageView.clipsToBounds = true
         imageView.layer.cornerRadius = 8
         imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.backgroundColor = .clear
         return imageView
+    }()
+
+    private lazy var newTagLabel: UILabel = {
+        let label = UILabel()
+        label.text = "NEW"
+        label.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
+        label.textColor = .white
+        label.backgroundColor = veryLightBrownColor
+        label.textAlignment = .center
+        label.layer.cornerRadius = 10
+        label.layer.masksToBounds = true
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.isHidden = !isNewProduct
+        return label
     }()
 
     private lazy var titleLabel: UILabel = {
@@ -42,10 +63,14 @@ class ProductDetailViewController: UIViewController {
 
     private lazy var infoButton: UIButton = {
         let button = UIButton(type: .system)
-        button.setImage(UIImage(systemName: "info.circle"), for: .normal)
-        button.tintColor = .systemGray
+        let symbolConfig = UIImage.SymbolConfiguration(pointSize: 15, weight: .medium)
+        button.setImage(UIImage(systemName: "info", withConfiguration: symbolConfig), for: .normal)
+        button.tintColor = UIColor(red: 168/255, green: 138/255, blue: 121/255, alpha: 1.0)
+        button.backgroundColor = UIColor(red: 225/255, green: 215/255, blue: 210/255, alpha: 1.0)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.addTarget(self, action: #selector(infoButtonTapped), for: .touchUpInside)
+        button.layer.cornerRadius = 14
+        button.clipsToBounds = true
         return button
     }()
 
@@ -63,7 +88,13 @@ class ProductDetailViewController: UIViewController {
         return label
     }()
 
-    // StackView для размеров
+    private lazy var topSeparatorView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .systemGray5
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
     private lazy var sizeStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.axis = .horizontal
@@ -74,53 +105,51 @@ class ProductDetailViewController: UIViewController {
         return stackView
     }()
 
+    private lazy var bottomSeparatorView: UIView = {
+        let view = UIView()
+        view.backgroundColor = .systemGray5
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
+
     private lazy var addToCartButton: UIButton = {
         let button = UIButton(type: .custom)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.layer.cornerRadius = 10
         button.titleLabel?.font = UIFont.systemFont(ofSize: 17, weight: .semibold)
-
-        // --- Настройка НАЧАЛЬНОГО состояния ---
-        let inactiveTitle = "Выберите размер"
-        button.isEnabled = false
-
-        button.setTitle(inactiveTitle, for: .normal)
-        button.setTitle(inactiveTitle, for: .disabled)
-
-        let activeBackgroundColor = UIColor(red: 168/255, green: 138/255, blue: 121/255, alpha: 1.0)
-        let inactiveBackgroundColor = UIColor.systemGray4
-        button.backgroundColor = inactiveBackgroundColor //
-
-        button.setTitleColor(.white, for: .normal)
+        button.setTitle("Загрузка...", for: .normal)
+        button.backgroundColor = .systemGray4
         button.setTitleColor(.systemGray, for: .disabled)
-
-        // Добавляем обработчик нажатия
+        button.setTitleColor(.white, for: .normal)
         button.addTarget(self, action: #selector(addToCartButtonTapped), for: .touchUpInside)
-
         return button
     }()
-
 
     override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = .systemBackground
         setupUI()
         setupConstraints()
-
+        selectSize(selectedSize)
+        updateAddToCartButtonAppearance()
     }
 
     // MARK: - Setup UI
-
     private func setupUI() {
         view.addSubview(scrollView)
+        view.addSubview(topSeparatorView)
+        view.addSubview(sizeStackView)
+        view.addSubview(bottomSeparatorView)
         view.addSubview(addToCartButton)
+
         scrollView.addSubview(contentView)
 
         contentView.addSubview(productImageView)
+        contentView.addSubview(newTagLabel)
         contentView.addSubview(titleLabel)
         contentView.addSubview(infoButton)
         contentView.addSubview(descriptionLabel)
-        contentView.addSubview(sizeStackView)
+
         setupSizeButtons()
     }
 
@@ -132,49 +161,50 @@ class ProductDetailViewController: UIViewController {
         for size in availableSizes {
             let button = createSizeButton(title: size)
             sizeStackView.addArrangedSubview(button)
-            sizeButtons.append(button) 
+            sizeButtons.append(button)
         }
     }
 
     // --- Функция для создания ОДНОЙ кнопки размера ---
     private func createSizeButton(title: String) -> UIButton {
-        var config = UIButton.Configuration.filled()
-        config.title = title
-        config.baseForegroundColor = .label
-        config.baseBackgroundColor = .systemGray5
-        config.cornerStyle = .medium
-        config.contentInsets = NSDirectionalEdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12)
+        let button = UIButton(type: .custom)
+        button.setTitle(title, for: .normal)
+        button.titleLabel?.font = UIFont.systemFont(ofSize: 14, weight: .semibold)
+        button.layer.cornerRadius = 20 // Круглые кнопки
+        button.layer.borderWidth = 1
 
-        let button = UIButton(configuration: config, primaryAction: nil)
+        updateSizeButtonAppearance(button, isSelected: false)
+
         button.addTarget(self, action: #selector(sizeButtonTapped(_:)), for: .touchUpInside)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.heightAnchor.constraint(equalToConstant: 40).isActive = true
-        button.widthAnchor.constraint(greaterThanOrEqualToConstant: 44).isActive = true
+        button.widthAnchor.constraint(greaterThanOrEqualTo: button.heightAnchor).isActive = true
 
         return button
     }
 
     // MARK: - Ограничения
-
     private func setupConstraints() {
         let safeArea = view.safeAreaLayoutGuide
         let contentLayoutGuide = scrollView.contentLayoutGuide
         let frameLayoutGuide = scrollView.frameLayoutGuide
 
         let padding: CGFloat = 16
+        let smallPadding: CGFloat = 8
+        let tighterPadding: CGFloat = 10
 
         NSLayoutConstraint.activate([
             // --- ScrollView ---
             scrollView.topAnchor.constraint(equalTo: safeArea.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: addToCartButton.topAnchor, constant: -padding),
+            scrollView.bottomAnchor.constraint(equalTo: topSeparatorView.topAnchor, constant: -padding),
 
             // --- ContentView ---
             contentView.topAnchor.constraint(equalTo: contentLayoutGuide.topAnchor),
             contentView.leadingAnchor.constraint(equalTo: contentLayoutGuide.leadingAnchor),
             contentView.trailingAnchor.constraint(equalTo: contentLayoutGuide.trailingAnchor),
-            contentView.bottomAnchor.constraint(equalTo: contentLayoutGuide.bottomAnchor),
+            contentView.bottomAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: padding),
             contentView.widthAnchor.constraint(equalTo: frameLayoutGuide.widthAnchor),
 
             // --- Картинка ---
@@ -183,37 +213,56 @@ class ProductDetailViewController: UIViewController {
             productImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -padding),
             productImageView.heightAnchor.constraint(equalTo: productImageView.widthAnchor, multiplier: 0.75),
 
-            // --- Заголовок ---
+             // --- Заголовок ---
+            newTagLabel.topAnchor.constraint(equalTo: productImageView.topAnchor, constant: smallPadding),
+            newTagLabel.leadingAnchor.constraint(equalTo: productImageView.leadingAnchor, constant: smallPadding),
+            newTagLabel.heightAnchor.constraint(equalToConstant: 22),
+            newTagLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 40),
+
             titleLabel.topAnchor.constraint(equalTo: productImageView.bottomAnchor, constant: padding),
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: padding),
-            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: infoButton.leadingAnchor, constant: -8),
+            titleLabel.trailingAnchor.constraint(lessThanOrEqualTo: infoButton.leadingAnchor, constant: -smallPadding),
 
             // --- Инфа кнопки ---
-            infoButton.centerYAnchor.constraint(equalTo: titleLabel.firstBaselineAnchor),
+            infoButton.centerYAnchor.constraint(equalTo: titleLabel.centerYAnchor),
             infoButton.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -padding),
-            infoButton.widthAnchor.constraint(equalToConstant: 30),
-            infoButton.heightAnchor.constraint(equalToConstant: 30),
+            infoButton.widthAnchor.constraint(equalToConstant: 28), // Увеличенный размер
+            infoButton.heightAnchor.constraint(equalToConstant: 28), // Увеличенный размер
 
             // --- Описание ---
-            descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
+            descriptionLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: smallPadding),
             descriptionLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: padding),
             descriptionLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -padding),
 
-            // --- Размер StackView ---
-            sizeStackView.topAnchor.constraint(equalTo: descriptionLabel.bottomAnchor, constant: padding * 1.5),
-            sizeStackView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: padding),
-             sizeStackView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -padding),
-            sizeStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -padding),
+            // --- View ---
+            topSeparatorView.bottomAnchor.constraint(equalTo: sizeStackView.topAnchor, constant: -tighterPadding),
+            topSeparatorView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            topSeparatorView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            topSeparatorView.heightAnchor.constraint(equalToConstant: 1),
+
+            // --- Размер ---
+            sizeStackView.bottomAnchor.constraint(equalTo: bottomSeparatorView.topAnchor, constant: -tighterPadding),
+            sizeStackView.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: padding),
+            sizeStackView.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -padding),
+            sizeStackView.heightAnchor.constraint(equalToConstant: 40),
 
             // --- В корзину ---
+            bottomSeparatorView.bottomAnchor.constraint(equalTo: addToCartButton.topAnchor, constant: -tighterPadding),
+            bottomSeparatorView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            bottomSeparatorView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            bottomSeparatorView.heightAnchor.constraint(equalToConstant: 1),
+
+            // --- Добавить в ---
             addToCartButton.bottomAnchor.constraint(equalTo: safeArea.bottomAnchor, constant: -padding),
             addToCartButton.leadingAnchor.constraint(equalTo: safeArea.leadingAnchor, constant: padding),
             addToCartButton.trailingAnchor.constraint(equalTo: safeArea.trailingAnchor, constant: -padding),
             addToCartButton.heightAnchor.constraint(equalToConstant: 50)
         ])
+
+        infoButton.setContentHuggingPriority(.required, for: .horizontal)
+        infoButton.setContentCompressionResistancePriority(.required, for: .horizontal)
     }
 
-    // MARK: - Кнопки
 
     @objc private func infoButtonTapped() {
         let alertController = UIAlertController(
@@ -235,58 +284,60 @@ class ProductDetailViewController: UIViewController {
     }
 
     @objc private func sizeButtonTapped(_ sender: UIButton) {
-        guard let selectedTitle = sender.configuration?.title else { return }
+        guard let selectedTitle = sender.titleLabel?.text else {
+            print("Ошибка: Не удалось получить title кнопки размера")
+            return
+         }
         selectSize(selectedTitle)
     }
 
-
-    // --- Функция для выбора размера и обновления UI ---
     private func selectSize(_ size: String?) {
         selectedSize = size
         print("Выбран размер: \(selectedSize ?? "Нет")")
 
-        // Обновляем внешний вид всех кнопок
         for button in sizeButtons {
-            guard let buttonTitle = button.configuration?.title else { continue }
+            guard let buttonTitle = button.titleLabel?.text else { continue }
             let isSelected = (buttonTitle == selectedSize)
-
-            // Создаем новую конфигурацию для обновления
-            var newConfig = button.configuration
-
-            if isSelected {
-                newConfig?.baseBackgroundColor = UIColor(red: 60/255, green: 60/255, blue: 67/255, alpha: 1.0) // Темно-серый
-                newConfig?.baseForegroundColor = .white
-            } else {
-                newConfig?.baseBackgroundColor = .systemGray5
-                newConfig?.baseForegroundColor = .label
-            }
-            button.configuration = newConfig
+            updateSizeButtonAppearance(button, isSelected: isSelected)
         }
 
-        updateAddToCartButtonState()
-        updateAddToCartButtonTitle()
-    }
-  
-
-
-    // --- Cостояния кнопки "В корзину" ---
-    private func updateAddToCartButtonState() {
-        let isEnabled = (selectedSize != nil)
-        addToCartButton.isEnabled = isEnabled
-        addToCartButton.backgroundColor = isEnabled ? UIColor(red: 168/255, green: 138/255, blue: 121/255, alpha: 1.0) : .systemGray4
+        addToCartButton.isEnabled = (selectedSize != nil)
+        updateAddToCartButtonAppearance()
     }
 
-
-    private func updateAddToCartButtonTitle() {
+    private func updateAddToCartButtonAppearance() {
         let basePrice = "14 999 ₽"
-        let title = "В корзину ・ \(basePrice)"
-        addToCartButton.setTitle(title, for: .normal)
-         if !addToCartButton.isEnabled {
-              addToCartButton.setTitle("Выберите размер", for: .disabled)
-         } else {
-             addToCartButton.setTitle(title, for: .normal)
-         }
+        let activeTitle = "В корзину ・ \(basePrice)"
+        let inactiveTitle = "Выберите размер"
+
+        let activeBackgroundColor = veryLightBrownColor
+        let inactiveBackgroundColor = UIColor.systemGray4
+        let activeTextColor = UIColor.white
+        let inactiveTextColor = UIColor.systemGray
+
+        if addToCartButton.isEnabled {
+            addToCartButton.setTitle(activeTitle, for: .normal)
+            addToCartButton.backgroundColor = activeBackgroundColor
+            addToCartButton.setTitleColor(darkTextColor, for: .normal)
+        } else {
+            addToCartButton.setTitle(inactiveTitle, for: .normal)
+            addToCartButton.setTitle(inactiveTitle, for: .disabled)
+            addToCartButton.backgroundColor = inactiveBackgroundColor
+            addToCartButton.setTitleColor(inactiveTextColor, for: .disabled)
+        }
+    }
+
+    private func updateSizeButtonAppearance(_ button: UIButton, isSelected: Bool) {
+        if isSelected {
+            button.backgroundColor = darkBrownColor
+            button.setTitleColor(.white, for: .normal)
+            button.layer.borderColor = UIColor.clear.cgColor
+            button.layer.borderWidth = 0
+        } else {
+            button.backgroundColor = lightBeigeColor
+            button.setTitleColor(darkTextColor, for: .normal)
+            button.layer.borderColor = lightBorderColor.cgColor
+            button.layer.borderWidth = 1
+        }
     }
 }
-// Commit для Pull Request
-
