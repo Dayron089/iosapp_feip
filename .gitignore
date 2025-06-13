@@ -2,6 +2,18 @@
 .DS_Store
 
 # Xcode
-*.xcodeproj
+# Проектные файлы
+# *.xcodeproj - не игнорируем сам .xcodeproj, он должен быть в репозитории
+# xcuserdata/ - игнорируем пользовательские данные Xcode
 xcuserdata/
-DerivedData/ 
+# DerivedData/ - игнорируем кэш сборки
+DerivedData/
+
+# Swift Package Manager
+.swiftpm/
+
+# Carthage
+Carthage/Build/
+
+# Pods
+Pods/ 
